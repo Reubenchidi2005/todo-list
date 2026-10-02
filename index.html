@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>To-do list</title>
+<style>
+:root{--bg:#eef2f0;--panel:#fff;--ink:#1d2a27;--mute:#6b7c77;--line:#d5dedb;--acc:#1f6f5c;--accink:#fff;--danger:#b4412f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121917;--panel:#1b2522;--ink:#e6efec;--mute:#8da09a;--line:#2e3b37;--acc:#4fbf9f;--accink:#0c1512;--danger:#e57a66}}
+:root[data-theme="dark"]{--bg:#121917;--panel:#1b2522;--ink:#e6efec;--mute:#8da09a;--line:#2e3b37;--acc:#4fbf9f;--accink:#0c1512;--danger:#e57a66}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.45 "Trebuchet MS","Segoe UI",system-ui,sans-serif}
+main{max-width:560px;margin:0 auto;padding:40px 16px 64px}
+h1{font:700 2.2rem/1.1 Georgia,"Times New Roman",serif;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--mute);margin:0 0 24px}
+form,.add{display:flex;gap:8px}
+input[type=text]{flex:1;min-width:0;padding:13px 14px;font:inherit;color:var(--ink);background:var(--panel);border:1.5px solid var(--line);border-radius:10px}
+input[type=text]:focus,button:focus-visible{outline:3px solid var(--acc);outline-offset:1px}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px}
+.addbtn{padding:0 20px;background:var(--acc);color:var(--accink);font-weight:700}
+.tabs{display:flex;gap:6px;margin:20px 0 10px}
+.tabs button{padding:6px 14px;background:transparent;color:var(--mute);border:1.5px solid var(--line)}
+.tabs button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+ul{list-style:none;margin:0;padding:0;background:var(--panel);border:1.5px solid var(--line);border-radius:12px}
+li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+li:last-child{border-bottom:0}
+li input[type=checkbox]{width:22px;height:22px;accent-color:var(--acc);flex:none}
+li span{flex:1;overflow-wrap:anywhere}
+li.done span{text-decoration:line-through;color:var(--mute)}
+li .del{background:none;color:var(--mute);padding:4px 8px;font-size:1.2rem}
+li .del:hover{color:var(--danger)}
+.empty{padding:28px 16px;text-align:center;color:var(--mute)}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--mute);font-size:.95rem}
+.foot button{background:none;color:var(--mute);text-decoration:underline;padding:4px}
+@media (prefers-reduced-motion:no-preference){li{animation:in .18s ease-out}@keyframes in{from{opacity:0;transform:translateY(-4px)}}}
+</style>
+</head>
+<body>
+<main>
+<h1>To-do list</h1>
+<p class="sub" id="sub"></p>
+<form id="f"><input type="text" id="t" placeholder="What needs doing?" aria-label="New task" autocomplete="off"><button class="addbtn" type="submit">Add task</button></form>
+<div class="tabs" id="tabs">
+<button data-v="all" aria-pressed="true">All</button>
+<button data-v="open" aria-pressed="false">To do</button>
+<button data-v="done" aria-pressed="false">Done</button>
+</div>
+<ul id="list"></ul>
+<div class="foot"><span id="count"></span><button id="clear" type="button">Clear completed</button></div>
+</main>
+<script>
+var KEY="todo-list-v1",tasks=[],view="all";
+try{var s=localStorage.getItem(KEY);if(s)tasks=JSON.parse(s)||[]}catch(e){tasks=[]}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(tasks))}catch(e){}}
+function render(){
+ var l=document.getElementById("list");l.innerHTML="";
+ var shown=tasks.filter(function(x){return view=="all"||(view=="done")==x.done});
+ if(!shown.length){var e=document.createElement("li");e.className="empty";
+  e.textContent=tasks.length?"Nothing here. Switch tabs to see other tasks.":"No tasks yet. Type one above and press Add task.";l.appendChild(e)}
+ shown.forEach(function(x){
+  var li=document.createElement("li");if(x.done)li.className="done";
+  var c=document.createElement("input");c.type="checkbox";c.checked=x.done;c.setAttribute("aria-label","Mark done: "+x.text);
+  c.onchange=function(){x.done=c.checked;save();render()};
+  var sp=document.createElement("span");sp.textContent=x.text;
+  var d=document.createElement("button");d.className="del";d.textContent="\u00d7";d.setAttribute("aria-label","Delete: "+x.text);
+  d.onclick=function(){tasks=tasks.filter(function(y){return y!==x});save();render()};
+  li.append(c,sp,d);l.appendChild(li)});
+ var open=tasks.filter(function(x){return!x.done}).length;
+ document.getElementById("count").textContent=open+" to do, "+(tasks.length-open)+" done";
+ document.getElementById("sub").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+}
+document.getElementById("f").onsubmit=function(e){e.preventDefault();var i=document.getElementById("t"),v=i.value.trim();
+ if(!v)return;tasks.unshift({text:v,done:false});i.value="";save();render()};
+document.getElementById("tabs").onclick=function(e){var v=e.target.dataset.v;if(!v)return;view=v;
+ [].forEach.call(this.children,function(b){b.setAttribute("aria-pressed",b.dataset.v==v)});render()};
+document.getElementById("clear").onclick=function(){tasks=tasks.filter(function(x){return!x.done});save();render()};
+render();
+</script>
+</body>
+</html>
